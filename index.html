@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RANK://LEADERBOARD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+:root{
+  --bg:#070811;
+  --panel:#0e1020;
+  --p:#ff2e9a;      /* primary neon */
+  --s:#00f0ff;      /* secondary neon */
+  --gold:#ffd23f;
+  --silver:#c9d6e3;
+  --bronze:#e0975a;
+  --text:#e8ecff;
+  --dim:#6b7290;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:'Chakra Petch',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+}
+.arcade{font-family:'Press Start 2P',monospace}
+
+/* scanline / crt vignette signature */
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:50; pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0.18) 0px,rgba(0,0,0,0.18) 1px,transparent 1px,transparent 3px);
+  mix-blend-mode:overlay;
+}
+body::after{
+  content:"";
+  position:fixed; inset:0; z-index:49; pointer-events:none;
+  background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%);
+}
+
+#particles{position:fixed; inset:0; z-index:-1}
+
+.header{
+  text-align:center;
+  padding:34px 20px 26px;
+  background:linear-gradient(160deg,#1a0c2e,#0a1b30);
+  border-bottom:3px solid var(--p);
+  box-shadow:0 0 50px rgba(255,46,154,.25), inset 0 -40px 60px -40px rgba(0,240,255,.15);
+  user-select:none;
+  position:relative;
+}
+#app-title{
+  display:inline-block;
+  font-size:clamp(16px,3.4vw,28px);
+  letter-spacing:1px;
+  color:var(--text);
+  text-shadow:0 0 8px var(--p), 0 0 22px rgba(255,46,154,.6);
+}
+.tag{color:var(--s); font-size:11px; letter-spacing:3px; margin-top:10px; opacity:.8}
+
+.wrap{max-width:760px;margin:auto;padding:22px}
+.card{
+  background:rgba(255,255,255,.03);
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:18px;
+  padding:18px;
+  margin-bottom:18px;
+}
+.controls{display:flex;gap:10px;justify-content:flex-end}
+select{
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.1);
+  background:var(--panel);
+  color:var(--text);
+  font-family:inherit;
+  cursor:pointer;
+}
+
+/* --- roster / members --- */
+.member{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:14px 16px;
+  margin-top:12px;
+  border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.06);
+  overflow:hidden;
+}
+.member.rank-1{border-color:var(--gold); box-shadow:0 0 28px rgba(255,210,63,.35)}
+.member.rank-2{border-color:var(--silver); box-shadow:0 0 16px rgba(201,214,227,.18)}
+.member.rank-3{border-color:var(--bronze); box-shadow:0 0 16px rgba(224,151,90,.18)}
+
+.m-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.m-id{display:flex;align-items:center;gap:10px;min-width:0}
+.badge{
+  font-family:'Press Start 2P',monospace;
+  font-size:11px;
+  width:30px;height:30px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:8px;
+  background:rgba(255,255,255,.06);
+  color:var(--dim);
+  flex-shrink:0;
+}
+.rank-1 .badge{background:var(--gold);color:#1a1100}
+.rank-2 .badge{background:var(--silver);color:#16202b}
+.rank-3 .badge{background:var(--bronze);color:#2a1500}
+.m-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-score{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--s);text-shadow:0 0 8px rgba(0,240,255,.6);flex-shrink:0}
+
+.xp-track{height:8px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}
+.xp-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--p),var(--s));width:0%}
+.rank-1 .xp-fill{background:linear-gradient(90deg,var(--gold),#ffec99)}
+
+.empty{text-align:center;padding:30px 10px;color:var(--dim);font-size:13px;line-height:1.6}
+
+/* --- rank up overlay --- */
+#rankup{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.3);
+  font-family:'Press Start 2P',monospace;
+  font-size:clamp(24px,6vw,52px);
+  color:var(--gold);
+  text-shadow:0 0 30px var(--gold), 0 0 60px rgba(255,210,63,.6);
+  opacity:0; pointer-events:none; z-index:200; text-align:center;
+}
+#flash{
+  position:fixed; inset:0; z-index:190; pointer-events:none;
+  background:radial-gradient(circle, rgba(255,255,255,.9), rgba(255,210,63,.4) 40%, transparent 75%);
+  opacity:0;
+}
+.shockwave{
+  position:fixed; top:50%; left:50%; width:40px; height:40px;
+  margin:-20px 0 0 -20px; border-radius:50%;
+  border:4px solid var(--gold);
+  box-shadow:0 0 30px var(--gold);
+  opacity:0; pointer-events:none; z-index:189;
+}
+
+/* --- overtake toasts --- */
+#overtake-container{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:10px;z-index:1000;max-width:90vw}
+.overtake-toast{
+  background:linear-gradient(135deg,#ff2e9a,#7b2ff7);
+  box-shadow:0 12px 30px rgba(255,46,154,.4);
+  border:1px solid rgba(255,255,255,.25);
+  padding:12px 18px;
+  border-radius:12px;
+  font-weight:700;
+  font-size:14px;
+  display:flex;align-items:center;gap:8px;
+}
+
+/* --- floating burst particles --- */
+.float{position:fixed;font-size:30px;pointer-events:none;z-index:99}
+
+/* --- secret admin page (full-page route, not a modal — lives outside the shared view) --- */
+#admin-view{
+  position:fixed; inset:0; z-index:500;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(0,240,255,.06), transparent 60%),
+    var(--bg);
+  display:none;
+  overflow-y:auto;
+  font-family:'Chakra Petch',sans-serif;
+}
+#admin-view.open{display:block}
+.admin-inner{max-width:480px;margin:auto;padding:60px 22px 60px}
+.admin-banner{
+  text-align:center;margin-bottom:26px;
+}
+.admin-banner .arcade{font-size:13px;color:var(--p);letter-spacing:2px;text-shadow:0 0 12px rgba(255,46,154,.6)}
+.admin-banner .sub{color:var(--dim);font-size:11px;letter-spacing:2px;margin-top:8px}
+
+/* lock screen: shown until pin is entered, and re-shown the instant focus/visibility is lost */
+#lock-screen{
+  position:absolute; inset:0; z-index:5;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;
+  text-align:center; padding:20px;
+}
+#lock-screen .lock-icon{font-size:42px; filter:drop-shadow(0 0 18px var(--p))}
+#lock-screen input{
+  width:220px; padding:14px; text-align:center; letter-spacing:8px; font-size:20px;
+  background:#1b1d33; color:var(--text); border:1px solid var(--p); border-radius:10px;
+}
+#lock-screen .lock-msg{color:var(--dim); font-size:12px; letter-spacing:1px; min-height:16px}
+#admin-content{display:none}
+#admin-content.unlocked{display:block}
+
+.card2{
+  background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
+  border-radius:16px; padding:20px; margin-bottom:18px;
+}
+.card2 h3{margin:0 0 14px;font-family:'Press Start 2P',monospace;font-size:13px;color:var(--s)}
+.card2 input,.card2 button{
+  width:100%;padding:11px;margin-bottom:10px;border-radius:8px;border:none;
+  font-family:inherit;font-size:14px;
+}
+.card2 input{background:#1b1d33;color:var(--text);border:1px solid rgba(255,255,255,.08)}
+.card2 button{background:linear-gradient(90deg,var(--p),var(--s));color:#0a0a14;font-weight:700;cursor:pointer}
+.card2 button.danger{background:#ff4d4d;color:#1a0000;width:auto;padding:8px 12px}
+.card2 button.ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--dim)}
+.card2 label{font-size:11px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px}
+.prow{display:flex;gap:8px;align-items:center;background:#171a2e;padding:8px;border-radius:8px;margin-bottom:6px}
+.prow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow input{width:80px;margin:0;padding:6px}
+hr{border:none;border-top:1px dashed rgba(255,255,255,.12);margin:18px 0}
+.exit-link{display:block;text-align:center;color:var(--dim);font-size:12px;margin-top:8px;cursor:pointer;text-decoration:underline}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div id="flash"></div>
+<div id="rankup" class="arcade"></div>
+<div id="overtake-container"></div>
+
+<div class="header">
+  <h1 id="app-title" class="arcade">🏆 ULTIMATE LEADERBOARD</h1>
+  <div class="tag">GAME STYLE EDITION</div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <div class="controls">
+      <select onchange="theme(this.value)" id="theme-select">
+        <option value="purple">Theme: Neon Arcade</option>
+        <option value="fire">Theme: Inferno</option>
+        <option value="cyber">Theme: Cyber Mint</option>
+      </select>
+    </div>
+  </div>
+  <div class="card" id="board"></div>
+</div>
+
+<!-- SECRET ADMIN PAGE — not a modal, not linked anywhere on the visible board.
+     Lives at its own URL (#<secret-path>) so sharing/screen-sharing the leaderboard tab
+     never exposes it: it's simply not rendered unless that exact hash is loaded, and even
+     then it stays behind a PIN lock that re-engages the instant the tab loses focus. -->
+<div id="admin-view">
+  <div class="admin-inner">
+
+    <div id="lock-screen">
+      <div class="lock-icon">🔒</div>
+      <div class="arcade" style="font-size:14px;color:var(--s)">RESTRICTED ACCESS</div>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off">
+      <div class="lock-msg" id="lock-msg"></div>
+    </div>
+
+    <div id="admin-content">
+      <div class="admin-banner">
+        <div class="arcade">⚙ CONTROL CENTER</div>
+        <div class="sub">SESSION LOCKS AUTOMATICALLY ON BLUR</div>
+      </div>
+
+      <div class="card2">
+        <h3>ADD PLAYER</h3>
+        <label>Player name</label>
+        <input id="pname" placeholder="e.g. Shadow_Wolf">
+        <label>Score</label>
+        <input id="pscore" type="number" value="0">
+        <button onclick="addPlayer()">+ ADD PLAYER</button>
+      </div>
+
+      <div class="card2">
+        <h3>ROSTER</h3>
+        <div id="list"></div>
+      </div>
+
+      <div class="card2">
+        <h3>SETTINGS</h3>
+        <label>Board title</label>
+        <input id="cfg-title">
+        <label>Rank-up sound URL</label>
+        <input id="cfg-sound">
+        <label>Overtake sound URL</label>
+        <input id="cfg-overtake">
+        <button onclick="saveConfig()">SAVE SETTINGS</button>
+        <hr>
+        <label>Change admin PIN</label>
+        <input id="cfg-pin" type="password" placeholder="New PIN">
+        <button class="ghost" onclick="changePin()">UPDATE PIN</button>
+      </div>
+
+      <span class="exit-link" onclick="lockNow()">🔒 lock now</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- state ---------- */
+const LS_PLAYERS = "players_v2";
+const LS_CONFIG  = "board_config";
+const LS_PIN     = "admin_pin";
+const LS_THEME   = "theme";
+
+let players = JSON.parse(localStorage.getItem(LS_PLAYERS) || "[]");
+let prevOrder = players.slice().sort((a,b)=>b.score-a.score).map(p=>p.id); // snapshot for overtake detection
+if(!localStorage.getItem(LS_PIN)) localStorage.setItem(LS_PIN, "1234");
+
+let config = JSON.parse(localStorage.getItem(LS_CONFIG) || "null") || {
+  title: "🏆 ULTIMATE LEADERBOARD",
+  soundRankUp: "https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3",
+  soundOvertake: "https://assets.mixkit.co/active_storage/sfx/2683/2683-preview.mp3",
+  particles: true
+};
+
+function persist(){
+  localStorage.setItem(LS_PLAYERS, JSON.stringify(players));
+}
+
+/* ---------- render + overtake/rankup detection ---------- */
+function render(animateNew){
+  const sorted = players.slice().sort((a,b)=>b.score-a.score);
+  const newOrder = sorted.map(p=>p.id);
+  const max = sorted.length ? Math.max(...sorted.map(p=>p.score), 1) : 1;
+
+  detectOvertakes(prevOrder, newOrder, sorted);
+
+  document.getElementById("app-title").innerText = config.title;
+  document.getElementById("particles").style.display = config.particles ? "block" : "none";
+
+  const board = document.getElementById("board");
+  board.innerHTML = sorted.length ? sorted.map((p,i)=>{
+    const rankClass = i===0?"rank-1":i===1?"rank-2":i===2?"rank-3":"";
+    const medal = i===0?"👑":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+    const pct = Math.max(4, Math.round((p.score/max)*100));
+    return `<div class="member ${rankClass}" id="row-${p.id}">
+      <div class="m-top">
+        <div class="m-id">
+          <div class="badge">${medal}</div>
+          <div class="m-name">${escapeHtml(p.name)}</div>
+        </div>
+        <div class="m-score">${p.score} PTS</div>
+      </div>
+      <div class="xp-track"><div class="xp-fill" data-pct="${pct}" style="width:0%"></div></div>
+    </div>`;
+  }).join("") : `<div class="empty">NO PLAYERS ON THE BOARD YET</div>`;
+
+  // animate entrance + fill xp bars (select elements first, then animate the array —
+  // passing an array instead of a selector string avoids GSAP's "target not found" warning when empty)
+  const rows = board.querySelectorAll(".member");
+  if(rows.length) gsap.from(rows, {opacity:0, y:18, duration:.4, stagger:.05, ease:"back.out(1.6)"});
+  const fills = board.querySelectorAll(".xp-fill");
+  if(fills.length) fills.forEach(el=>{
+    gsap.to(el, {width: el.dataset.pct+"%", duration:1, ease:"power2.out", delay:.15});
+  });
+
+  prevOrder = newOrder;
+}
+
+function detectOvertakes(oldOrder, newOrder, sorted){
+  if(!oldOrder.length) return;
+  newOrder.forEach((id, newIdx)=>{
+    const oldIdx = oldOrder.indexOf(id);
+    if(oldIdx === -1 || newIdx >= oldIdx) return; // didn't climb
+    for(let i = newIdx + 1; i <= oldIdx; i++){
+      const overtaken = sorted.find(p=>p.id === oldOrder[i]);
+      const climber = sorted.find(p=>p.id === id);
+      if(overtaken && climber) triggerOvertake(climber.name, overtaken.name);
+    }
+    if(newIdx === 0 && oldIdx !== 0){
+      rankUpFx();
+      playSound(config.soundRankUp);
+    }
+  });
+}
+
+/* ---------- effects (GSAP powered) ---------- */
+function rankUpFx(){
+  const e = document.getElementById("rankup");
+  const flash = document.getElementById("flash");
+  e.innerText = "★ RANK UP! ★";
+  gsap.killTweensOf(e);
+
+  // screen flash + camera punch
+  gsap.timeline()
+    .set(flash, {opacity:0})
+    .to(flash, {opacity:1, duration:.06})
+    .to(flash, {opacity:0, duration:.6, ease:"power2.out"})
+    .to(document.body, {x:10, duration:.04, yoyo:true, repeat:9, ease:"none"}, 0)
+    .to("body", {filter:"brightness(1.4)", duration:.08, yoyo:true, repeat:1}, 0);
+
+  // expanding gold shockwave ring(s)
+  for(let i=0;i<2;i++){
+    const ring = document.createElement("div");
+    ring.className = "shockwave";
+    document.body.appendChild(ring);
+    gsap.fromTo(ring, {opacity:.9, scale:0}, {
+      opacity:0, scale: 26 + i*6, duration:.9+i*.2, ease:"power2.out", delay:i*.12,
+      onComplete:()=>ring.remove()
+    });
+  }
+
+  // glitchy punch-in text with a little chromatic shake, then triumphant hold, then burst away
+  gsap.timeline()
+    .set(e, {opacity:0, scale:.2, rotate:-6, x:0})
+    .to(e, {opacity:1, scale:1.4, rotate:4, duration:.18, ease:"power4.out"})
+    .to(e, {x:-6, duration:.04}).to(e, {x:6, duration:.04}).to(e, {x:0, rotate:0, scale:1, duration:.18, ease:"back.out(2)"})
+    .to(e, {scale:1.06, duration:.5, yoyo:true, repeat:2, ease:"sine.inOut"})
+    .to(e, {opacity:0, scale:2.2, duration:.55, ease:"power2.in"});
+
+  burst(46, true);
+  setTimeout(()=>burst(20, true), 300);
+}
+
+function triggerOvertake(climber, overtaken){
+  const container = document.getElementById("overtake-container");
+  const toast = document.createElement("div");
+  toast.className = "overtake-toast";
+  toast.innerHTML = `🔥 <span><strong>${escapeHtml(climber)}</strong> overtook <strong>${escapeHtml(overtaken)}</strong>!</span>`;
+  container.appendChild(toast);
+  gsap.timeline()
+    .fromTo(toast, {x:160, opacity:0, rotate:6}, {x:0, opacity:1, rotate:0, duration:.4, ease:"back.out(2.2)"})
+    .to(toast, {scale:1.08, duration:.12, yoyo:true, repeat:1})
+    .to(toast, {opacity:0, x:60, scale:.9, duration:.35, delay:3, onComplete:()=>toast.remove()});
+  // quick screen punch for impact, smaller than a full rank-up
+  gsap.to(document.body, {x:4, duration:.04, yoyo:true, repeat:5, ease:"none"});
+  burst(10);
+  playSound(config.soundOvertake);
+}
+
+function burst(count, epic){
+  for(let i=0;i<count;i++){
+    const d = document.createElement("div");
+    d.className = "float";
+    d.textContent = epic ? ["✨","🎉","⭐","💎","🔥","👑"][Math.floor(Math.random()*6)]
+                          : ["✨","🎉","⭐","💎"][Math.floor(Math.random()*4)];
+    const originX = epic ? window.innerWidth/2 : Math.random()*window.innerWidth;
+    const originY = epic ? window.innerHeight/2 : (Math.random()*window.innerHeight*.6 + window.innerHeight*.2);
+    d.style.left = originX + "px";
+    d.style.top = originY + "px";
+    d.style.fontSize = (epic ? 26 + Math.random()*26 : 22 + Math.random()*16) + "px";
+    document.body.appendChild(d);
+
+    // epic bursts fly outward from center like fireworks; normal bursts just drift up
+    const angle = Math.random() * Math.PI * 2;
+    const dist = epic ? 140 + Math.random()*260 : 30 + Math.random()*40;
+    const dx = epic ? Math.cos(angle)*dist : (Math.random()-0.5)*60;
+    const dy = epic ? Math.sin(angle)*dist : -(110 + Math.random()*60);
+
+    gsap.fromTo(d, {opacity:1, x:0, y:0, scale:.5, rotate:0}, {
+      opacity:0, x:dx, y:dy, scale: epic ? 1.4+Math.random()*.6 : 1.2,
+      rotate: (Math.random()-0.5)*240,
+      duration: epic ? 1+Math.random()*.6 : 1.1+Math.random()*.4,
+      ease: epic ? "power2.out" : "power1.out",
+      onComplete:()=>d.remove()
+    });
+  }
+}
+
+function playSound(url){
+  if(!url) return;
+  const a = new Audio(url);
+  a.volume = .55;
+  a.play().catch(()=>{});
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ---------- particles backdrop (lightweight canvas, gsap-driven opacity) ---------- */
+const canvas = document.getElementById("particles");
+const ctx = canvas.getContext("2d");
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize();
+addEventListener("resize", resize);
+const dust = Array.from({length:90}, ()=>({x:Math.random()*innerWidth, y:Math.random()*innerHeight, v:0.25+Math.random()*0.6, r:1+Math.random()*1.5}));
+(function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(config.particles){
+    ctx.fillStyle = "rgba(255,255,255,.35)";
+    dust.forEach(p=>{
+      p.y += p.v;
+      if(p.y > innerHeight) p.y = 0;
+      ctx.fillRect(p.x, p.y, p.r, p.r);
+    });
+  }
+  requestAnimationFrame(loop);
+})();
+
+/* ---------- theme ---------- */
+function theme(t){
+  if(t === "purple") setVars("#ff2e9a","#00f0ff");
+  if(t === "fire")   setVars("#ff5e3a","#ffb13c");
+  if(t === "cyber")  setVars("#00ffaa","#00bfff");
+  localStorage.setItem(LS_THEME, t);
+}
+function setVars(a,b){
+  document.documentElement.style.setProperty("--p", a);
+  document.documentElement.style.setProperty("--s", b);
+}
+
+/* ---------- secret admin route ----------
+   The admin page only exists at this exact URL hash. It is never linked from the
+   visible board, so nothing in that view hints at its existence. Default path below —
+   change it (and store your own) before relying on this for anything sensitive, since
+   anyone with view-source access to this file can read the default. */
+const ADMIN_PATH = localStorage.getItem("admin_path") || "vault-7x2k";
+let unlocked = false;
+
+function route(){
+  const isAdminUrl = location.hash === "#" + ADMIN_PATH;
+  document.getElementById("admin-view").classList.toggle("open", isAdminUrl);
+  if(isAdminUrl){
+    lockNow(); // always start locked, even on direct navigation
+  }
+}
+window.addEventListener("hashchange", route);
+
+function lockNow(){
+  unlocked = false;
+  document.getElementById("admin-content").classList.remove("unlocked");
+  document.getElementById("lock-screen").style.display = "flex";
+  const pinInput = document.getElementById("pin-input");
+  pinInput.value = "";
+  document.getElementById("lock-msg").innerText = "";
+  setTimeout(()=>pinInput.focus(), 50);
+}
+
+function unlock(pin){
+  if(pin === localStorage.getItem(LS_PIN)){
+    unlocked = true;
+    document.getElementById("lock-screen").style.display = "none";
+    document.getElementById("admin-content").classList.add("unlocked");
+    document.getElementById("cfg-title").value = config.title;
+    document.getElementById("cfg-sound").value = config.soundRankUp;
+    document.getElementById("cfg-overtake").value = config.soundOvertake;
+    renderAdminList();
+    gsap.fromTo("#admin-content", {opacity:0, y:10}, {opacity:1, y:0, duration:.3});
+  } else {
+    document.getElementById("lock-msg").innerText = "INCORRECT PIN";
+    gsap.fromTo("#pin-input", {x:-6}, {x:6, duration:.06, repeat:5, yoyo:true, clearProps:"x"});
+    document.getElementById("pin-input").value = "";
+  }
+}
+
+document.getElementById("pin-input").addEventListener("keydown", e=>{
+  if(e.key === "Enter") unlock(e.target.value);
+});
+
+// auto re-lock the instant this tab loses focus or becomes hidden — covers alt-tabbing
+// during a screen share, switching windows, or minimizing while a share is live.
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden && unlocked) lockNow();
+});
+window.addEventListener("blur", ()=>{
+  if(unlocked) lockNow();
+});
+window.addEventListener("keydown", e=>{
+  if(e.key === "Escape" && unlocked) lockNow();
+});
+
+/* ---------- admin actions ---------- */
+function renderAdminList(){
+  document.getElementById("list").innerHTML = players.slice().sort((a,b)=>b.score-a.score).map(p=>`
+    <div class="prow">
+      <span>${escapeHtml(p.name)}</span>
+      <input type="number" value="${p.score}" onchange="updateScore(${p.id}, this.value)">
+      <button class="danger" onclick="removePlayer(${p.id})">🗑</button>
+    </div>`).join("") || `<div style="color:var(--dim);font-size:13px;padding:6px 0;">No players yet.</div>`;
+}
+function addPlayer(){
+  const nameEl = document.getElementById("pname");
+  const scoreEl = document.getElementById("pscore");
+  const name = nameEl.value.trim();
+  if(!name) return;
+  players.push({ name, score: parseInt(scoreEl.value)||0, id: Date.now() + Math.floor(Math.random()*1000) });
+  persist();
+  nameEl.value = ""; scoreEl.value = "0";
+  renderAdminList();
+  render();
+  burst(16);
+}
+function updateScore(id, val){
+  const item = players.find(p => p.id === id);   // FIX: id stays numeric end-to-end, no string/number mismatch
+  if(!item) return;
+  item.score = parseInt(val) || 0;
+  persist();
+  renderAdminList();
+  render();
+}
+function removePlayer(id){
+  players = players.filter(p => p.id !== id);
+  persist();
+  prevOrder = prevOrder.filter(pid => pid !== id);
+  renderAdminList();
+  render();
+}
+function saveConfig(){
+  config = {
+    title: document.getElementById("cfg-title").value || config.title,
+    soundRankUp: document.getElementById("cfg-sound").value,
+    soundOvertake: document.getElementById("cfg-overtake").value,
+    particles: true
+  };
+  localStorage.setItem(LS_CONFIG, JSON.stringify(config));
+  render();
+}
+
+/* ---------- cross-tab sync (e.g. board on a TV tab, admin on a phone tab, same browser) ----------
+   Uses the native 'storage' event instead of window.open()+postMessage, which is more reliable
+   on static hosts (no popup blockers, no opener-window dependency, works in iframes too). */
+window.addEventListener("storage", (e)=>{
+  if(e.key === LS_PLAYERS){
+    players = JSON.parse(e.newValue || "[]");
+    render();
+  }
+  if(e.key === LS_CONFIG){
+    config = JSON.parse(e.newValue || "null") || config;
+    render();
+  }
+  if(e.key === LS_THEME && e.newValue){
+    theme(e.newValue);
+  }
+});
+
+function changePin(){
+  const val = document.getElementById("cfg-pin").value.trim();
+  if(!val){ return; }
+  localStorage.setItem(LS_PIN, val);
+  document.getElementById("cfg-pin").value = "";
+  document.getElementById("lock-msg").innerText = "";
+  alert("PIN updated.");
+}
+
+/* ---------- boot ---------- */
+theme(localStorage.getItem(LS_THEME) || "purple");
+render();
+route();
+</script>
+</body>
+</html>
