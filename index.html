@@ -5,43 +5,73 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RANK://LEADERBOARD</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&family=Readex+Pro:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 :root{
   --bg:#070811;
   --panel:#0e1020;
-  --p:#ff2e9a;      /* primary neon */
-  --s:#00f0ff;      /* secondary neon */
+  --p:#ff2e9a;
+  --s:#00f0ff;
+  --correct:#00ffaa;
+  --wrong:#ff4d4d;
   --gold:#ffd23f;
   --silver:#c9d6e3;
   --bronze:#e0975a;
   --text:#e8ecff;
   --dim:#6b7290;
+  --card-bg:rgba(255,255,255,.03);
+  --card-border:rgba(255,255,255,.07);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --shadow-md:0 12px 40px rgba(0,0,0,.6);
+  --glow-p:0 0 20px rgba(255,46,154,.25);
+  --glow-s:0 0 20px rgba(0,240,255,.2);
 }
+
+/* ========== THEMES ========== */
+[data-theme="fire"]{
+  --p:#ff5e3a; --s:#ffb13c;
+  --glow-p:0 0 20px rgba(255,94,58,.25);
+  --glow-s:0 0 20px rgba(255,177,60,.2);
+}
+[data-theme="cyber"]{
+  --p:#00ffaa; --s:#00bfff;
+  --glow-p:0 0 20px rgba(0,255,170,.25);
+  --glow-s:0 0 20px rgba(0,191,255,.2);
+}
+[data-theme="loud"]{
+  --bg:#f5f3ff;
+  --panel:#ffffff;
+  --p:#7c3aed;
+  --s:#a855f7;
+  --correct:#10b981;
+  --wrong:#ef4444;
+  --gold:#f59e0b;
+  --silver:#94a3b8;
+  --bronze:#b45309;
+  --text:#1e1b4b;
+  --dim:#8b85a4;
+  --card-bg:rgba(255,255,255,.92);
+  --card-border:rgba(124,58,237,.12);
+  --shadow-sm:0 2px 8px rgba(124,58,237,.08);
+  --shadow-md:0 12px 40px rgba(124,58,237,.15);
+  --glow-p:0 0 20px rgba(124,58,237,.15);
+  --glow-s:0 0 20px rgba(168,85,247,.12);
+}
+
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{
   margin:0;
   min-height:100vh;
-  font-family:'Chakra Petch',sans-serif;
+  font-family:'Inter','Chakra Petch',sans-serif;
   background:var(--bg);
   color:var(--text);
   overflow-x:hidden;
+  transition:background .4s ease, color .4s ease;
 }
 .arcade{font-family:'Press Start 2P',monospace}
-
-/* scanline / crt vignette signature */
-body::before{
-  content:"";
-  position:fixed; inset:0; z-index:50; pointer-events:none;
-  background:repeating-linear-gradient(0deg,rgba(0,0,0,0.18) 0px,rgba(0,0,0,0.18) 1px,transparent 1px,transparent 3px);
-  mix-blend-mode:overlay;
-}
-body::after{
-  content:"";
-  position:fixed; inset:0; z-index:49; pointer-events:none;
-  background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%);
-}
+.readex{font-family:'Readex Pro',sans-serif}
 
 #particles{position:fixed; inset:0; z-index:-1}
 
@@ -53,168 +83,442 @@ body::after{
   box-shadow:0 0 50px rgba(255,46,154,.25), inset 0 -40px 60px -40px rgba(0,240,255,.15);
   user-select:none;
   position:relative;
+  transition:all .4s;
 }
+[data-theme="loud"] .header{
+  background:linear-gradient(160deg,#ede9fe,#ddd6fe);
+  border-bottom:3px solid var(--p);
+  box-shadow:0 0 50px rgba(124,58,237,.12), inset 0 -40px 60px -40px rgba(168,85,247,.1);
+}
+
 #app-title{
   display:inline-block;
   font-size:clamp(16px,3.4vw,28px);
   letter-spacing:1px;
   color:var(--text);
   text-shadow:0 0 8px var(--p), 0 0 22px rgba(255,46,154,.6);
+  transition:text-shadow .4s;
 }
-.tag{color:var(--s); font-size:11px; letter-spacing:3px; margin-top:10px; opacity:.8}
+[data-theme="loud"] #app-title{ text-shadow:0 0 2px rgba(124,58,237,.1); }
+.tag{color:var(--s); font-size:11px; letter-spacing:3px; margin-top:10px; opacity:.8; font-weight:700}
 
-.wrap{max-width:760px;margin:auto;padding:22px}
+.wrap{max-width:900px;margin:auto;padding:22px}
 .card{
-  background:rgba(255,255,255,.03);
+  background:var(--card-bg);
   backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,.07);
+  border:1px solid var(--card-border);
   border-radius:18px;
   padding:18px;
   margin-bottom:18px;
+  box-shadow:var(--shadow-sm);
+  transition:background .4s, border-color .4s, box-shadow .4s;
 }
-.controls{display:flex;gap:10px;justify-content:flex-end}
-select{
+.controls{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+select, .btn-mode{
   padding:10px 14px;
   border-radius:10px;
-  border:1px solid rgba(255,255,255,.1);
+  border:1px solid var(--card-border);
   background:var(--panel);
   color:var(--text);
   font-family:inherit;
   cursor:pointer;
+  font-weight:600;
+  font-size:13px;
+  transition:all .2s;
+}
+.btn-mode:hover{
+  background:rgba(255,255,255,0.08);
+  transform:translateY(-1px);
+}
+[data-theme="loud"] .btn-mode:hover{background:rgba(124,58,237,.06)}
+.btn-mode.active-mode{
+  background:linear-gradient(90deg,var(--p),var(--s));
+  color:#fff;
+  border-color:transparent;
+  box-shadow:var(--glow-s);
+}
+[data-theme="loud"] .btn-mode.active-mode{color:#fff}
+
+/* --- Game Arena Styles --- */
+#game-view { display:none; position:relative; z-index:2; }
+.question-box {
+  text-align:center;
+  padding:35px 20px;
+  min-height:160px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+}
+.q-title {
+  font-size:11px;
+  letter-spacing:4px;
+  color:var(--dim);
+  margin-bottom:15px;
+  font-weight:700;
+}
+.question-text {
+  font-size:clamp(20px, 3.5vw, 36px);
+  font-weight:800;
+  line-height:1.4;
+  color:var(--text);
+  text-shadow:0 2px 10px rgba(0,0,0,0.5);
+  transition:text-shadow .4s;
+}
+[data-theme="loud"] .question-text{text-shadow:none}
+
+/* Options Layout */
+.options-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:4px;
+  margin-bottom:18px;
+}
+@media(max-width:550px){ .options-grid { grid-template-columns:1fr; } }
+
+.option-card {
+  background:linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border:1px solid var(--card-border);
+  border-radius:12px;
+  padding:16px 20px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  cursor:pointer;
+  user-select:none;
+  position:relative;
+  overflow:hidden;
+  transition:all .2s;
+}
+[data-theme="loud"] .option-card{
+  background:#fff;
+  border:1px solid var(--card-border);
+  box-shadow:var(--shadow-sm);
+}
+.option-card:hover:not(.locked){
+  transform:translateY(-2px);
+  border-color:var(--s);
+  box-shadow:var(--glow-s);
+}
+.option-prefix {
+  font-family:'Press Start 2P', monospace;
+  font-size:12px;
+  background:rgba(255,255,255,0.08);
+  color:var(--dim);
+  width:32px; height:32px;
+  border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  transition:all .2s;
+}
+[data-theme="loud"] .option-prefix{background:#f3f0ff; color:var(--p)}
+.option-value {
+  font-size:16px;
+  font-weight:600;
+  color:var(--text);
+}
+/* States */
+.option-card.selected-panel {
+  border-color:var(--s);
+  background:rgba(0, 240, 255, 0.05);
+  box-shadow:0 0 15px rgba(0, 240, 255, 0.15);
+}
+[data-theme="loud"] .option-card.selected-panel{
+  background:#f5f3ff;
+  box-shadow:0 0 15px rgba(124,58,237,.15);
+}
+.option-card.selected-panel .option-prefix { background:var(--s); color:#070811; }
+[data-theme="loud"] .option-card.selected-panel .option-prefix{background:var(--s); color:#fff}
+
+.option-card.reveal-correct {
+  border-color:var(--correct) !important;
+  background:rgba(0, 255, 170, 0.12) !important;
+  box-shadow:0 0 25px rgba(0, 255, 170, 0.3) !important;
+}
+[data-theme="loud"] .option-card.reveal-correct{
+  background:#ecfdf5 !important;
+  box-shadow:0 0 20px rgba(16,185,129,.15) !important;
+}
+.option-card.reveal-correct .option-prefix { background:var(--correct) !important; color:#070811; }
+[data-theme="loud"] .option-card.reveal-correct .option-prefix{background:var(--correct); color:#fff}
+
+.option-card.reveal-wrong {
+  border-color:var(--wrong) !important;
+  background:rgba(255, 77, 77, 0.08) !important;
+  opacity:0.4;
+}
+[data-theme="loud"] .option-card.reveal-wrong{background:#fef2f2 !important; opacity:.5}
+
+/* --- Floating Grading Window --- */
+.floating-window {
+  position: fixed;
+  top: 15vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 650px;
+  background: var(--panel);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(255,255,255,0.05);
+  z-index: 300;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.floating-window.open { display: flex; }
+.window-titlebar {
+  background: rgba(255,255,255,0.03);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+}
+[data-theme="loud"] .window-titlebar { background: #f3f0ff; }
+.window-title { font-size: 11px; color: var(--p); letter-spacing: 1px; }
+.window-close {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+.window-close:hover { color: var(--wrong); }
+.window-body {
+  padding: 18px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.group-eval-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--card-border);
+  padding: 14px;
+  border-radius: 12px;
+  text-align: center;
+  user-select: none;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all .2s;
+}
+[data-theme="loud"] .group-eval-card { background: #fff; box-shadow: var(--shadow-sm); }
+.group-eval-card .g-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 10px; font-weight: 700; font-size: 14px;
+}
+.group-eval-card .g-answers {
+  display: flex; gap: 6px; justify-content: center; margin-bottom: 8px;
+}
+.group-eval-card .g-answers button {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.group-eval-card .g-answers button:hover:not(.locked) { border-color: var(--s); color: var(--s); }
+.group-eval-card .g-answers button.selected-ans {
+  background: var(--p); color: #fff; border-color: var(--p); box-shadow: var(--glow-p);
+}
+.group-eval-card .g-answers button.btn-pass { border-style: dashed; opacity: 0.7; }
+.group-eval-card .g-answers button.btn-pass.selected-ans {
+  background: var(--dim); border-color: var(--dim); box-shadow: none; opacity: 1;
+}
+.group-eval-card .g-status {
+  font-size: 11px; font-weight: 700; height: 18px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
 }
 
-/* --- roster / members --- */
-.member{
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  padding:14px 16px;
-  margin-top:12px;
-  border-radius:14px;
-  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
-  border:1px solid rgba(255,255,255,.06);
-  overflow:hidden;
+/* Status Colors */
+.group-eval-card.status-correct { border-color: var(--correct); background: rgba(0,255,170,.06); }
+[data-theme="loud"] .group-eval-card.status-correct { background: #ecfdf5; }
+.group-eval-card.status-wrong { border-color: var(--wrong); background: rgba(255,77,77,.04); }
+[data-theme="loud"] .group-eval-card.status-wrong { background: #fef2f2; }
+.group-eval-card.status-pass { border-color: var(--dim); background: rgba(255,255,255,0.01); opacity: 0.6; }
+
+.game-actions { display: flex; gap: 12px; margin-top: 18px; }
+.game-actions button {
+  flex: 1; padding: 15px; border: none; border-radius: 12px; font-family: inherit; font-weight: 700;
+  cursor: pointer; font-size: 13px; letter-spacing: 1px; transition: all .2s;
 }
+.game-actions button:hover { transform: translateY(-2px); }
+.game-actions button:active { transform: translateY(0); }
+.btn-reveal { background: #171a36; color: var(--s); border: 1px solid rgba(0,240,255,0.3); }
+[data-theme="loud"] .btn-reveal { background: #f5f3ff; color: var(--p); border: 1px solid rgba(124,58,237,.2); }
+.btn-eval { background: linear-gradient(90deg, var(--p), #7b2ff7); color: #fff; box-shadow: 0 4px 20px rgba(255,46,154,0.3); }
+[data-theme="loud"] .btn-eval { background: linear-gradient(90deg, var(--p), var(--s)); box-shadow: 0 4px 20px rgba(124,58,237,.2); }
+.btn-eval:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+.game-nav-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.nav-card {
+  background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px;
+  padding: 12px; text-align: center; cursor: pointer; transition: all .2s; box-shadow: var(--shadow-sm);
+}
+.nav-card:hover:not(.disabled) { transform: translateY(-2px); border-color: var(--s); }
+.nav-card.disabled { opacity: 0.3; cursor: not-allowed; }
+.nav-card h4 { margin: 0 0 4px 0; font-size: 11px; color: var(--dim); letter-spacing: 1px;}
+.nav-card p { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+
+/* --- roster / members --- */
+.member{ position:relative; display:flex; flex-direction:column; gap:8px; padding:14px 16px; margin-top:12px; border-radius:14px; background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.06); overflow:hidden; transition:all .3s; }
+[data-theme="loud"] .member{ background:#fff; border:1px solid var(--card-border); box-shadow:var(--shadow-sm); }
 .member.rank-1{border-color:var(--gold); box-shadow:0 0 28px rgba(255,210,63,.35)}
 .member.rank-2{border-color:var(--silver); box-shadow:0 0 16px rgba(201,214,227,.18)}
 .member.rank-3{border-color:var(--bronze); box-shadow:0 0 16px rgba(224,151,90,.18)}
+[data-theme="loud"] .member.rank-1{box-shadow:0 4px 20px rgba(245,158,11,.25)}
+[data-theme="loud"] .member.rank-2{box-shadow:0 4px 20px rgba(148,163,184,.2)}
+[data-theme="loud"] .member.rank-3{box-shadow:0 4px 20px rgba(180,83,9,.2)}
 
 .m-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .m-id{display:flex;align-items:center;gap:10px;min-width:0}
-.badge{
-  font-family:'Press Start 2P',monospace;
-  font-size:11px;
-  width:30px;height:30px;
-  display:flex;align-items:center;justify-content:center;
-  border-radius:8px;
-  background:rgba(255,255,255,.06);
-  color:var(--dim);
-  flex-shrink:0;
-}
+.badge{ font-family:'Press Start 2P',monospace; font-size:11px; width:30px;height:30px; display:flex;align-items:center;justify-content:center; border-radius:8px; background:rgba(255,255,255,.06); color:var(--dim); flex-shrink:0; }
+[data-theme="loud"] .badge{background:#f3f0ff; color:var(--p)}
 .rank-1 .badge{background:var(--gold);color:#1a1100}
 .rank-2 .badge{background:var(--silver);color:#16202b}
 .rank-3 .badge{background:var(--bronze);color:#2a1500}
 .m-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .m-score{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--s);text-shadow:0 0 8px rgba(0,240,255,.6);flex-shrink:0}
+[data-theme="loud"] .m-score{text-shadow:none}
 
 .xp-track{height:8px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}
+[data-theme="loud"] .xp-track{background:#ede9fe}
 .xp-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--p),var(--s));width:0%}
 .rank-1 .xp-fill{background:linear-gradient(90deg,var(--gold),#ffec99)}
 
 .empty{text-align:center;padding:30px 10px;color:var(--dim);font-size:13px;line-height:1.6}
 
+/* --- swipe transition curtain --- */
+.screen-wipe {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: linear-gradient(90deg, var(--p), var(--s));
+  z-index: 9999;
+  transform: translateX(-100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.wipe-logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(16px, 4vw, 32px);
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.85);
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+}
+
 /* --- rank up overlay --- */
 #rankup{
   position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.3);
-  font-family:'Press Start 2P',monospace;
-  font-size:clamp(24px,6vw,52px);
-  color:var(--gold);
-  text-shadow:0 0 30px var(--gold), 0 0 60px rgba(255,210,63,.6);
-  opacity:0; pointer-events:none; z-index:200; text-align:center;
+  font-family:'Press Start 2P',monospace; font-size:clamp(24px,6vw,52px); color:var(--gold);
+  text-shadow:0 0 30px var(--gold), 0 0 60px rgba(255,210,63,.6); opacity:0; pointer-events:none; z-index:200; text-align:center;
 }
 #flash{
   position:fixed; inset:0; z-index:190; pointer-events:none;
-  background:radial-gradient(circle, rgba(255,255,255,.9), rgba(255,210,63,.4) 40%, transparent 75%);
-  opacity:0;
+  background:radial-gradient(circle, rgba(255,255,255,.9), rgba(255,210,63,.4) 40%, transparent 75%); opacity:0;
 }
 .shockwave{
-  position:fixed; top:50%; left:50%; width:40px; height:40px;
-  margin:-20px 0 0 -20px; border-radius:50%;
-  border:4px solid var(--gold);
-  box-shadow:0 0 30px var(--gold);
-  opacity:0; pointer-events:none; z-index:189;
+  position:fixed; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border-radius:50%;
+  border:4px solid var(--gold); box-shadow:0 0 30px var(--gold); opacity:0; pointer-events:none; z-index:189;
 }
 
 /* --- overtake toasts --- */
 #overtake-container{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:10px;z-index:1000;max-width:90vw}
 .overtake-toast{
-  background:linear-gradient(135deg,#ff2e9a,#7b2ff7);
-  box-shadow:0 12px 30px rgba(255,46,154,.4);
-  border:1px solid rgba(255,255,255,.25);
-  padding:12px 18px;
-  border-radius:12px;
-  font-weight:700;
-  font-size:14px;
-  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--p),#7b2ff7); box-shadow:0 12px 30px rgba(255,46,154,.4);
+  border:1px solid rgba(255,255,255,.25); padding:12px 18px; border-radius:12px; font-weight:700; font-size:14px;
+  display:flex;align-items:center;gap:8px; color:#fff;
 }
+[data-theme="loud"] .overtake-toast{ background:linear-gradient(135deg,var(--p),var(--s)); box-shadow:0 12px 30px rgba(124,58,237,.25); color:#fff; }
 
 /* --- floating burst particles --- */
 .float{position:fixed;font-size:30px;pointer-events:none;z-index:99}
 
-/* --- secret admin page (full-page route, not a modal — lives outside the shared view) --- */
+/* --- secret admin page --- */
 #admin-view{
   position:fixed; inset:0; z-index:500;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(0,240,255,.06), transparent 60%),
-    var(--bg);
-  display:none;
-  overflow-y:auto;
-  font-family:'Chakra Petch',sans-serif;
+  background:radial-gradient(circle at 50% 0%, rgba(0,240,255,.06), transparent 60%), var(--bg);
+  display:none; overflow-y:auto; font-family:'Inter','Chakra Petch',sans-serif; transition:background .4s;
 }
+[data-theme="loud"] #admin-view{ background:radial-gradient(circle at 50% 0%, rgba(124,58,237,.04), transparent 60%), var(--bg); }
 #admin-view.open{display:block}
-.admin-inner{max-width:480px;margin:auto;padding:60px 22px 60px}
-.admin-banner{
-  text-align:center;margin-bottom:26px;
-}
+.admin-inner{max-width:520px;margin:auto;padding:60px 22px 60px}
+.admin-banner{ text-align:center;margin-bottom:26px; }
 .admin-banner .arcade{font-size:13px;color:var(--p);letter-spacing:2px;text-shadow:0 0 12px rgba(255,46,154,.6)}
+[data-theme="loud"] .admin-banner .arcade{text-shadow:none}
 .admin-banner .sub{color:var(--dim);font-size:11px;letter-spacing:2px;margin-top:8px}
 
-/* lock screen: shown until pin is entered, and re-shown the instant focus/visibility is lost */
 #lock-screen{
-  position:absolute; inset:0; z-index:5;
-  background:var(--bg);
-  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;
-  text-align:center; padding:20px;
+  position:absolute; inset:0; z-index:5; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; text-align:center; padding:20px; transition:background .4s;
 }
 #lock-screen .lock-icon{font-size:42px; filter:drop-shadow(0 0 18px var(--p))}
 #lock-screen input{
   width:220px; padding:14px; text-align:center; letter-spacing:8px; font-size:20px;
-  background:#1b1d33; color:var(--text); border:1px solid var(--p); border-radius:10px;
+  background:#1b1d33; color:var(--text); border:1px solid var(--p); border-radius:10px; outline:none;
 }
+[data-theme="loud"] #lock-screen input{background:#fff; border:1px solid var(--p); color:var(--text)}
 #lock-screen .lock-msg{color:var(--dim); font-size:12px; letter-spacing:1px; min-height:16px}
 #admin-content{display:none}
 #admin-content.unlocked{display:block}
 
-.card2{
-  background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
-  border-radius:16px; padding:20px; margin-bottom:18px;
-}
+.card2{ background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:20px; margin-bottom:18px; box-shadow:var(--shadow-sm); transition:all .4s; }
 .card2 h3{margin:0 0 14px;font-family:'Press Start 2P',monospace;font-size:13px;color:var(--s)}
-.card2 input,.card2 button{
-  width:100%;padding:11px;margin-bottom:10px;border-radius:8px;border:none;
-  font-family:inherit;font-size:14px;
-}
-.card2 input{background:#1b1d33;color:var(--text);border:1px solid rgba(255,255,255,.08)}
-.card2 button{background:linear-gradient(90deg,var(--p),var(--s));color:#0a0a14;font-weight:700;cursor:pointer}
-.card2 button.danger{background:#ff4d4d;color:#1a0000;width:auto;padding:8px 12px}
+.card2 input,.card2 button, .card2 select{ width:100%;padding:11px;margin-bottom:10px;border-radius:8px;border:none; font-family:inherit;font-size:14px; transition:all .2s; }
+.card2 input, .card2 select{background:#1b1d33;color:var(--text);border:1px solid rgba(255,255,255,.08)}
+[data-theme="loud"] .card2 input, [data-theme="loud"] .card2 select{background:#fff; border:1px solid var(--card-border); color:var(--text)}
+.card2 button{background:linear-gradient(90deg,var(--p),var(--s));color:#fff;font-weight:700;cursor:pointer}
+.card2 button:hover{transform:translateY(-1px); opacity:.95}
+.card2 button.danger{background:#ff4d4d;color:#fff;width:auto;padding:8px 12px}
 .card2 button.ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--dim)}
-.card2 label{font-size:11px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px}
+[data-theme="loud"] .card2 button.ghost{border:1px solid var(--card-border)}
+.card2 label{font-size:11px;color:var(--dim);display:block;margin-bottom:4px;letter-spacing:1px; font-weight:600}
 .prow{display:flex;gap:8px;align-items:center;background:#171a2e;padding:8px;border-radius:8px;margin-bottom:6px}
-.prow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-theme="loud"] .prow{background:#f5f3ff}
+.prow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; font-weight:600}
 .prow input{width:80px;margin:0;padding:6px}
 hr{border:none;border-top:1px dashed rgba(255,255,255,.12);margin:18px 0}
+[data-theme="loud"] hr{border-color:rgba(124,58,237,.15)}
 .exit-link{display:block;text-align:center;color:var(--dim);font-size:12px;margin-top:8px;cursor:pointer;text-decoration:underline}
+
+.qrow { display:flex; flex-direction:column; background:#171a2e; padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.05); }
+[data-theme="loud"] .qrow{background:#f5f3ff; border:1px solid var(--card-border)}
+.qrow-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.qrow-body { font-size:14px; color:#ffffff; font-weight:600; margin-bottom:6px; }
+[data-theme="loud"] .qrow-body{color:var(--text)}
+.qrow-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:11px; color:var(--dim); margin-bottom:6px;}
+.qrow-ans { font-size:12px; color:var(--correct); font-weight:600; }
+
+.save-row{display:flex;gap:8px; margin-bottom:10px}
+.save-row button{flex:1; margin-bottom:0}
+input[type="file"]{padding:8px; font-size:13px}
+
+/* Toast notifications */
+#toast-container{position:fixed;top:18px;right:18px;display:flex;flex-direction:column;gap:10px;z-index:1001;max-width:90vw}
+.toast{
+  background:var(--panel); border:1px solid var(--card-border); box-shadow:var(--shadow-md); padding:12px 18px;
+  border-radius:12px; font-weight:700; font-size:14px; display:flex;align-items:center;gap:8px; color:var(--text);
+  animation:slideIn .3s ease;
+}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 </style>
 </head>
 <body>
@@ -223,32 +527,84 @@ hr{border:none;border-top:1px dashed rgba(255,255,255,.12);margin:18px 0}
 <div id="flash"></div>
 <div id="rankup" class="arcade"></div>
 <div id="overtake-container"></div>
+<div id="toast-container"></div>
+
+<div class="screen-wipe" id="swipe-curtain">
+  <div class="wipe-logo" id="swipe-logo">🏆 RANK://RUN</div>
+</div>
 
 <div class="header">
   <h1 id="app-title" class="arcade">🏆 ULTIMATE LEADERBOARD</h1>
-  <div class="tag">GAME STYLE EDITION</div>
+  <div class="tag">GAMIFIED EDITION</div>
 </div>
 
 <div class="wrap">
   <div class="card">
     <div class="controls">
+      <div style="display:flex; gap:8px;">
+        <button id="mode-board-btn" class="btn-mode active-mode" onclick="switchView('board')">LEADERBOARD</button>
+        <button id="mode-game-btn" class="btn-mode" onclick="switchView('game')">GAME ARENA</button>
+      </div>
       <select onchange="theme(this.value)" id="theme-select">
         <option value="purple">Theme: Neon Arcade</option>
         <option value="fire">Theme: Inferno</option>
         <option value="cyber">Theme: Cyber Mint</option>
+        <option value="loud">Theme: Loud (White/Purple)</option>
       </select>
     </div>
   </div>
+
   <div class="card" id="board"></div>
+
+  <div id="game-view">
+    <div class="game-nav-cards">
+      <div class="nav-card" id="nav-prev" onclick="navigateQuestion(-1)">
+        <h4>◀ PREVIOUS MATCH</h4>
+        <p id="nav-prev-text">None</p>
+      </div>
+      <div class="nav-card" id="nav-next" onclick="navigateQuestion(1)">
+        <h4>NEXT MATCH ▶</h4>
+        <p id="nav-next-text">None</p>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="question-box">
+        <div class="q-title arcade" id="q-index-display">ARENA CORE STANDBY</div>
+        <div class="question-text readex" id="q-text-display">No questions loaded. Unlock the Control Center to sync configurations.</div>
+      </div>
+    </div>
+
+    <div class="options-grid" id="arena-options-grid"></div>
+
+    <div style="text-align: center; margin-bottom: 18px;">
+      <button class="btn-mode" onclick="openGradingWindow()" style="width: 100%; padding: 18px; border-color: var(--p); background: rgba(255,46,154,0.05); font-size:14px;">
+        📝 OPEN SCORING PANEL WINDOW
+      </button>
+    </div>
+
+    <div class="game-actions">
+      <button class="btn-reveal arcade" id="btn-reveal" onclick="revealAnswer()">LOCK & REVEAL</button>
+      <button class="btn-eval arcade" id="btn-eval" onclick="evaluatePoints()" disabled>SUBMIT SCORING RUN</button>
+    </div>
+  </div>
 </div>
 
-<!-- SECRET ADMIN PAGE — not a modal, not linked anywhere on the visible board.
-     Lives at its own URL (#<secret-path>) so sharing/screen-sharing the leaderboard tab
-     never exposes it: it's simply not rendered unless that exact hash is loaded, and even
-     then it stays behind a PIN lock that re-engages the instant the tab loses focus. -->
+<div class="floating-window" id="grading-window">
+  <div class="window-titlebar" id="window-drag-handle">
+    <span class="window-title arcade">ROSTER MATRIX // GRADING</span>
+    <button class="window-close" onclick="closeGradingWindow()">×</button>
+  </div>
+  <div class="window-body">
+    <div style="font-size:12px; color:var(--dim); font-weight:600; margin-bottom: 16px;">
+      Mark answers to queue them. Use 'P' to Pass. You can click "Lock & Reveal" while this window is open.
+    </div>
+    <div class="matrix-grid" id="eval-groups-grid"></div>
+  </div>
+</div>
+
 <div id="admin-view">
   <div class="admin-inner">
-
     <div id="lock-screen">
       <div class="lock-icon">🔒</div>
       <div class="arcade" style="font-size:14px;color:var(--s)">RESTRICTED ACCESS</div>
@@ -263,63 +619,399 @@ hr{border:none;border-top:1px dashed rgba(255,255,255,.12);margin:18px 0}
       </div>
 
       <div class="card2">
-        <h3>ADD PLAYER</h3>
-        <label>Player name</label>
-        <input id="pname" placeholder="e.g. Shadow_Wolf">
-        <label>Score</label>
-        <input id="pscore" type="number" value="0">
-        <button onclick="addPlayer()">+ ADD PLAYER</button>
+        <h3>SAVE / RESTORE DATA</h3>
+        <p style="font-size:12px; color:var(--dim); margin:0 0 10px;">GitHub Pages has no backend. Export your data to a JSON file for safekeeping.</p>
+        <div class="save-row">
+          <button onclick="exportData()">⬇ DOWNLOAD SAVE</button>
+          <button class="ghost" onclick="document.getElementById('import-file').click()">⬆ UPLOAD SAVE</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
       </div>
 
       <div class="card2">
-        <h3>ROSTER</h3>
+        <h3>CONFIG QUESTION ENGINE</h3>
+        <label>Question Prompt</label>
+        <input id="qtxt" placeholder="e.g. Which algorithm handles positional rendering?">
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div><label>Option A</label><input id="qoptA" placeholder="Option A"></div>
+          <div><label>Option B</label><input id="qoptB" placeholder="Option B"></div>
+          <div><label>Option C</label><input id="qoptC" placeholder="Option C"></div>
+          <div><label>Option D</label><input id="qoptD" placeholder="Option D"></div>
+        </div>
+
+        <label>Target Correct Option Match</label>
+        <select id="qcorrect">
+          <option value="0">Option A</option>
+          <option value="1">Option B</option>
+          <option value="2">Option C</option>
+          <option value="3">Option D</option>
+        </select>
+
+        <label>Points Payload Allocation</label>
+        <input id="qpts" type="number" value="100">
+        <button onclick="addQuestion()">+ EMIT TRIVIA CELL</button>
+        <hr>
+        <label>Questions Pipeline Stack</label>
+        <div id="q-list" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div>
+      </div>
+
+      <div class="card2">
+        <h3>ADD TEAM PLAYER / GROUP</h3>
+        <label>Player/Group Name ID</label>
+        <input id="pname" placeholder="e.g. Alpha_Squad">
+        <label>Initial Standings Score</label>
+        <input id="pscore" type="number" value="0">
+        <button onclick="addPlayer()">+ COMMIT PROFILE</button>
+      </div>
+
+      <div class="card2">
+        <h3>ROSTER MATRIX</h3>
         <div id="list"></div>
       </div>
 
       <div class="card2">
-        <h3>SETTINGS</h3>
-        <label>Board title</label>
+        <h3>GLOBAL CORE SETTINGS</h3>
+        <label>Board Title Signature</label>
         <input id="cfg-title">
-        <label>Rank-up sound URL</label>
-        <input id="cfg-sound">
-        <label>Overtake sound URL</label>
-        <input id="cfg-overtake">
-        <button onclick="saveConfig()">SAVE SETTINGS</button>
+        <label>Rank-up Audio URL</label>
+        <input id="cfg-sound" placeholder="https://...mp3">
+        <label>Overtake Audio URL</label>
+        <input id="cfg-overtake" placeholder="https://...mp3">
+        <button onclick="saveConfig()">SAVE SYSTEM PARAMETERS</button>
         <hr>
-        <label>Change admin PIN</label>
-        <input id="cfg-pin" type="password" placeholder="New PIN">
-        <button class="ghost" onclick="changePin()">UPDATE PIN</button>
+        <label>Rotate Matrix Admin PIN</label>
+        <input id="cfg-pin" type="password" placeholder="New Terminal Passcode">
+        <button class="ghost" onclick="changePin()">UPDATE TERMINAL LOCK</button>
       </div>
 
       <span class="exit-link" onclick="lockNow()">🔒 lock now</span>
     </div>
-
   </div>
 </div>
 
 <script>
-/* ---------- state ---------- */
+/* ---------- core initialization ---------- */
 const LS_PLAYERS = "players_v2";
 const LS_CONFIG  = "board_config";
 const LS_PIN     = "admin_pin";
 const LS_THEME   = "theme";
+const LS_QUESTIONS = "board_questions_mchoice";
 
-let players = JSON.parse(localStorage.getItem(LS_PLAYERS) || "[]");
-let prevOrder = players.slice().sort((a,b)=>b.score-a.score).map(p=>p.id); // snapshot for overtake detection
-if(!localStorage.getItem(LS_PIN)) localStorage.setItem(LS_PIN, "1234");
+let players = [];
+let questions = [];
+let currentQIdx = 0;
+let groupAnswers = {};   
+let correctGroups = [];  
+let isRevealed = false;
+let prevOrder = [];
 
-let config = JSON.parse(localStorage.getItem(LS_CONFIG) || "null") || {
+let config = {
   title: "🏆 ULTIMATE LEADERBOARD",
-  soundRankUp: "https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3",
-  soundOvertake: "https://assets.mixkit.co/active_storage/sfx/2683/2683-preview.mp3",
+  soundRankUp: "",
+  soundOvertake: "",
   particles: true
 };
 
-function persist(){
-  localStorage.setItem(LS_PLAYERS, JSON.stringify(players));
+function loadAll(){
+  try{
+    players = JSON.parse(localStorage.getItem(LS_PLAYERS) || "[]");
+    questions = JSON.parse(localStorage.getItem(LS_QUESTIONS) || "[]");
+    config = JSON.parse(localStorage.getItem(LS_CONFIG) || "null") || config;
+  }catch(e){ console.error("Load error", e); }
+  if(!localStorage.getItem(LS_PIN)) localStorage.setItem(LS_PIN, "1234");
+  prevOrder = players.slice().sort((a,b)=>b.score-a.score).map(p=>p.id);
 }
 
-/* ---------- render + overtake/rankup detection ---------- */
+function persist(){ localStorage.setItem(LS_PLAYERS, JSON.stringify(players)); }
+function persistQuestions() { localStorage.setItem(LS_QUESTIONS, JSON.stringify(questions)); }
+function persistConfig() { localStorage.setItem(LS_CONFIG, JSON.stringify(config)); }
+
+/* ---------- Floating Window Logic ---------- */
+function openGradingWindow() {
+  const win = document.getElementById("grading-window");
+  win.classList.add("open");
+  gsap.fromTo(win, {opacity: 0, y: 15, scale: 0.98}, {opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "back.out(1.5)"});
+}
+function closeGradingWindow() {
+  const win = document.getElementById("grading-window");
+  gsap.to(win, {opacity: 0, y: 10, scale: 0.98, duration: 0.2, onComplete: () => win.classList.remove("open")});
+}
+
+const dragHandle = document.getElementById("window-drag-handle");
+const floatWin = document.getElementById("grading-window");
+let isDragging = false;
+let dragStartX, dragStartY, initialX, initialY;
+
+dragHandle.addEventListener("mousedown", (e) => {
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  const style = window.getComputedStyle(floatWin);
+  const matrix = new WebKitCSSMatrix(style.transform);
+  initialX = matrix.m41;
+  initialY = matrix.m42;
+});
+document.addEventListener("mousemove", (e) => {
+  if(!isDragging) return;
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+  floatWin.style.transform = `translate(calc(-50% + ${initialX + dx}px), ${initialY + dy}px)`;
+});
+document.addEventListener("mouseup", () => { isDragging = false; });
+
+/* ---------- view switcher layout with swipe transition ---------- */
+function switchView(mode) {
+  const bView = document.getElementById("board");
+  const gView = document.getElementById("game-view");
+  const bBtn = document.getElementById("mode-board-btn");
+  const gBtn = document.getElementById("mode-game-btn");
+  const curtain = document.getElementById("swipe-curtain");
+  const logo = document.getElementById("swipe-logo");
+  
+  const isLoud = document.documentElement.getAttribute("data-theme") === "loud";
+  if (isLoud && config.title) {
+    logo.innerText = config.title;
+  } else {
+    logo.innerText = "";
+  }
+
+  // Swipe Animation Timeline
+  const tl = gsap.timeline();
+  
+  tl.fromTo(curtain, 
+    { xPercent: -100 }, 
+    { xPercent: 0, duration: 0.45, ease: "power3.inOut" }
+  );
+
+  if (isLoud) {
+    tl.to(logo, { opacity: 1, scale: 1, duration: 0.25, ease: "back.out(1.5)" }, "-=0.15");
+  }
+
+  tl.add(() => {
+    if(mode === 'game') {
+      bView.style.display = "none";
+      gView.style.display = "block";
+      bBtn.classList.remove("active-mode");
+      gBtn.classList.add("active-mode");
+      setupGameArena();
+    } else {
+      gView.style.display = "none";
+      bView.style.display = "block";
+      gBtn.classList.remove("active-mode");
+      bBtn.classList.add("active-mode");
+      closeGradingWindow();
+      render();
+    }
+  });
+
+  if (isLoud) {
+    tl.to(logo, { opacity: 0, scale: 0.9, duration: 0.2 }, "+=0.1");
+  }
+
+  tl.to(curtain, { xPercent: 100, duration: 0.45, ease: "power3.inOut" });
+}
+
+/* ---------- gamified trivia interface runtime ---------- */
+function setupGameArena() {
+  groupAnswers = {};
+  correctGroups = [];
+  isRevealed = false;
+  document.getElementById("btn-reveal").disabled = false;
+  document.getElementById("btn-eval").disabled = true;
+
+  if(questions.length === 0) {
+    document.getElementById("q-index-display").innerText = "ENGINE MATRIX VACANT";
+    document.getElementById("q-text-display").innerText = "No operational questions compiled. Access the admin dashboard layout.";
+    document.getElementById("arena-options-grid").innerHTML = "";
+    document.getElementById("nav-prev-text").innerText = "None";
+    document.getElementById("nav-next-text").innerText = "None";
+    document.getElementById("eval-groups-grid").innerHTML = "";
+    return;
+  }
+  
+  if(currentQIdx >= questions.length) currentQIdx = questions.length - 1;
+  if(currentQIdx < 0) currentQIdx = 0;
+
+  const q = questions[currentQIdx];
+  document.getElementById("q-index-display").innerText = `MATCH SYSTEM CELL ${currentQIdx + 1} OF ${questions.length} [VAL: ${q.points} PTS]`;
+  document.getElementById("q-text-display").innerText = q.text;
+  
+  const prev = document.getElementById("nav-prev");
+  const next = document.getElementById("nav-next");
+  prev.classList.toggle("disabled", currentQIdx === 0);
+  next.classList.toggle("disabled", currentQIdx >= questions.length - 1);
+  document.getElementById("nav-prev-text").innerText = currentQIdx > 0 ? `CELL ${currentQIdx}` : "None";
+  document.getElementById("nav-next-text").innerText = currentQIdx < questions.length - 1 ? `CELL ${currentQIdx + 2}` : "None";
+
+  const prefixes = ["A", "B", "C", "D"];
+  const optGrid = document.getElementById("arena-options-grid");
+  optGrid.innerHTML = q.options.map((opt, i) => `
+    <div class="option-card" id="optcard-${i}" onclick="selectPanelOption(${i})">
+      <div class="option-prefix">${prefixes[i]}</div>
+      <div class="option-value">${escapeHtml(opt)}</div>
+    </div>
+  `).join("");
+
+  gsap.fromTo(".option-card", 
+    { opacity: 0, scale: 0.9, y: 15 }, 
+    { opacity: 1, scale: 1, y: 0, duration: 0.4, stagger: 0.06, ease: "back.out(1.2)" }
+  );
+
+  const grid = document.getElementById("eval-groups-grid");
+  if(players.length === 0){
+    grid.innerHTML = `<div style="color:var(--dim); font-size:12px; grid-column: 1/-1;">No operational user roster data modules loaded.</div>`;
+    return;
+  }
+  
+  grid.innerHTML = players.map(p => {
+    const saved = groupAnswers[p.id];
+    return `
+    <div class="group-eval-card" id="gcard-${p.id}">
+      <div class="g-name">${escapeHtml(p.name)}</div>
+      <div class="g-answers" id="gans-${p.id}">
+        ${prefixes.map((pre, idx) => `
+          <button class="ans-btn ${saved === idx ? 'selected-ans' : ''}" onclick="setGroupAnswer(${p.id}, ${idx})" data-idx="${idx}">${pre}</button>
+        `).join('')}
+        <button class="ans-btn btn-pass ${saved === -1 ? 'selected-ans' : ''}" onclick="setGroupAnswer(${p.id}, -1)" data-idx="-1">P</button>
+      </div>
+      <div class="g-status" id="gstatus-${p.id}"></div>
+    </div>
+  `}).join("");
+}
+
+function setGroupAnswer(id, idx) {
+  if(isRevealed) return;
+  groupAnswers[id] = idx;
+  const btns = document.querySelectorAll(`#gans-${id} .ans-btn`);
+  btns.forEach(b => b.classList.toggle("selected-ans", parseInt(b.dataset.idx) === idx));
+  gsap.fromTo(`#gans-${id} .ans-btn.selected-ans`, {scale:.8}, {scale:1, duration:.2, ease:"back.out(2)"});
+}
+
+function selectPanelOption(idx) {
+  if (isRevealed) return;
+  document.querySelectorAll(".option-card").forEach((card, i) => {
+    card.classList.toggle("selected-panel", i === idx);
+  });
+  gsap.fromTo(`#optcard-${idx}`, {scale: 0.97}, {scale: 1, duration: 0.2, ease: "power2.out"});
+}
+
+function navigateQuestion(direction) {
+  let target = currentQIdx + direction;
+  if (target >= 0 && target < questions.length) {
+    currentQIdx = target;
+    gsap.fromTo(".question-box", {opacity:0, y:-8}, {opacity:1, y:0, duration:0.25});
+    setupGameArena();
+  }
+}
+
+function revealAnswer() {
+  if(questions.length === 0 || isRevealed) return;
+  isRevealed = true;
+  document.getElementById("btn-reveal").disabled = true;
+  document.getElementById("btn-eval").disabled = false;
+
+  const q = questions[currentQIdx];
+  const trueCorrectIdx = parseInt(q.correctIndex);
+
+  document.querySelectorAll(".option-card").forEach((card, i) => {
+    card.classList.add("locked");
+    card.classList.remove("selected-panel");
+    if (i === trueCorrectIdx) {
+      card.classList.add("reveal-correct");
+      gsap.fromTo(card, {scale: 1}, {scale: 1.04, duration: 0.4, yoyo: true, repeat: 1, ease: "sine.inOut"});
+    } else {
+      card.classList.add("reveal-wrong");
+    }
+  });
+
+  correctGroups = [];
+  players.forEach(p => {
+    const card = document.getElementById(`gcard-${p.id}`);
+    const status = document.getElementById(`gstatus-${p.id}`);
+    const btns = document.querySelectorAll(`#gans-${p.id} .ans-btn`);
+    btns.forEach(b => b.classList.add("locked"));
+    
+    const ans = groupAnswers[p.id];
+    
+    if(ans === undefined || ans === -1){
+      status.innerHTML = `<span style="color:var(--dim)">${ans === -1 ? 'PASSED' : 'NO ANSWER'}</span>`;
+      card.classList.add("status-pass");
+      return;
+    }
+    
+    if(ans === trueCorrectIdx){
+      correctGroups.push(p.id);
+      status.innerHTML = `<span style="color:var(--correct)">✓ CORRECT</span>`;
+      card.classList.add("status-correct");
+      gsap.fromTo(card, {scale:1}, {scale:1.03, duration:.2, yoyo:true, repeat:1});
+    } else {
+      status.innerHTML = `<span style="color:var(--wrong)">✗ WRONG</span>`;
+      card.classList.add("status-wrong");
+    }
+  });
+
+  const flash = document.getElementById("flash");
+  const anyCorrect = correctGroups.length > 0;
+  if (anyCorrect) {
+    burst(20);
+    gsap.timeline()
+      .set(flash, {opacity: 0, background: "radial-gradient(circle, rgba(0,255,170,0.4), transparent 70%)"})
+      .to(flash, {opacity: 1, duration: 0.08})
+      .to(flash, {opacity: 0, duration: 0.4});
+    playSynth("correct");
+  } else {
+    gsap.timeline()
+      .set(flash, {opacity: 0, background: "radial-gradient(circle, rgba(255,77,77,0.3), transparent 70%)"})
+      .to(flash, {opacity: 1, duration: 0.08})
+      .to(flash, {opacity: 0, duration: 0.4});
+    playSynth("wrong");
+  }
+}
+
+function evaluatePoints() {
+  if(questions.length === 0 || !questions[currentQIdx]) return;
+  if(!isRevealed) return;
+  
+  if(correctGroups.length === 0){
+    showToast("No correct answers to award.");
+    closeGradingWindow();
+    advanceQuestion();
+    return;
+  }
+
+  const pts = parseInt(questions[currentQIdx].points) || 0;
+  let awarded = 0;
+
+  players.forEach(p => {
+    if(correctGroups.includes(p.id)) {
+      p.score += pts;
+      awarded++;
+      triggerOvertakeToast(`${p.name}`, `+${pts} PTS`);
+    }
+  });
+  
+  persist();
+  showToast(`Scored! ${awarded} group(s) awarded +${pts} pts.`);
+  playSynth("score");
+  closeGradingWindow();
+
+  setTimeout(() => { switchView('board'); }, 600);
+  setTimeout(() => { advanceQuestion(); }, 1800);
+}
+
+function advanceQuestion() {
+  if(currentQIdx < questions.length - 1) {
+    currentQIdx++;
+    if(document.getElementById("game-view").style.display === "block"){
+      setupGameArena();
+    }
+  } else {
+    showToast("End of question pipeline reached.");
+  }
+}
+
+/* ---------- dynamic sorting standing arrays ---------- */
 function render(animateNew){
   const sorted = players.slice().sort((a,b)=>b.score-a.score);
   const newOrder = sorted.map(p=>p.id);
@@ -347,8 +1039,6 @@ function render(animateNew){
     </div>`;
   }).join("") : `<div class="empty">NO PLAYERS ON THE BOARD YET</div>`;
 
-  // animate entrance + fill xp bars (select elements first, then animate the array —
-  // passing an array instead of a selector string avoids GSAP's "target not found" warning when empty)
   const rows = board.querySelectorAll(".member");
   if(rows.length) gsap.from(rows, {opacity:0, y:18, duration:.4, stagger:.05, ease:"back.out(1.6)"});
   const fills = board.querySelectorAll(".xp-fill");
@@ -363,7 +1053,7 @@ function detectOvertakes(oldOrder, newOrder, sorted){
   if(!oldOrder.length) return;
   newOrder.forEach((id, newIdx)=>{
     const oldIdx = oldOrder.indexOf(id);
-    if(oldIdx === -1 || newIdx >= oldIdx) return; // didn't climb
+    if(oldIdx === -1 || newIdx >= oldIdx) return; 
     for(let i = newIdx + 1; i <= oldIdx; i++){
       const overtaken = sorted.find(p=>p.id === oldOrder[i]);
       const climber = sorted.find(p=>p.id === id);
@@ -371,38 +1061,33 @@ function detectOvertakes(oldOrder, newOrder, sorted){
     }
     if(newIdx === 0 && oldIdx !== 0){
       rankUpFx();
-      playSound(config.soundRankUp);
+      playSound(config.soundRankUp || null, "rankup");
     }
   });
 }
 
-/* ---------- effects (GSAP powered) ---------- */
 function rankUpFx(){
   const e = document.getElementById("rankup");
   const flash = document.getElementById("flash");
   e.innerText = "★ RANK UP! ★";
   gsap.killTweensOf(e);
 
-  // screen flash + camera punch
   gsap.timeline()
-    .set(flash, {opacity:0})
+    .set(flash, {opacity:0, background:"radial-gradient(circle, rgba(255,255,255,.9), rgba(255,210,63,.4) 40%, transparent 75%)"})
     .to(flash, {opacity:1, duration:.06})
     .to(flash, {opacity:0, duration:.6, ease:"power2.out"})
     .to(document.body, {x:10, duration:.04, yoyo:true, repeat:9, ease:"none"}, 0)
     .to("body", {filter:"brightness(1.4)", duration:.08, yoyo:true, repeat:1}, 0);
 
-  // expanding gold shockwave ring(s)
   for(let i=0;i<2;i++){
     const ring = document.createElement("div");
     ring.className = "shockwave";
     document.body.appendChild(ring);
     gsap.fromTo(ring, {opacity:.9, scale:0}, {
-      opacity:0, scale: 26 + i*6, duration:.9+i*.2, ease:"power2.out", delay:i*.12,
-      onComplete:()=>ring.remove()
+      opacity:0, scale: 26 + i*6, duration:.9+i*.2, ease:"power2.out", delay:i*.12, onComplete:()=>ring.remove()
     });
   }
 
-  // glitchy punch-in text with a little chromatic shake, then triumphant hold, then burst away
   gsap.timeline()
     .set(e, {opacity:0, scale:.2, rotate:-6, x:0})
     .to(e, {opacity:1, scale:1.4, rotate:4, duration:.18, ease:"power4.out"})
@@ -424,10 +1109,20 @@ function triggerOvertake(climber, overtaken){
     .fromTo(toast, {x:160, opacity:0, rotate:6}, {x:0, opacity:1, rotate:0, duration:.4, ease:"back.out(2.2)"})
     .to(toast, {scale:1.08, duration:.12, yoyo:true, repeat:1})
     .to(toast, {opacity:0, x:60, scale:.9, duration:.35, delay:3, onComplete:()=>toast.remove()});
-  // quick screen punch for impact, smaller than a full rank-up
   gsap.to(document.body, {x:4, duration:.04, yoyo:true, repeat:5, ease:"none"});
   burst(10);
-  playSound(config.soundOvertake);
+  playSound(config.soundOvertake || null, "overtake");
+}
+
+function triggerOvertakeToast(title, subtitle){
+  const container = document.getElementById("overtake-container");
+  const toast = document.createElement("div");
+  toast.className = "overtake-toast";
+  toast.innerHTML = `⭐ <span><strong>${escapeHtml(title)}</strong> <span style="opacity:.85">${escapeHtml(subtitle)}</span></span>`;
+  container.appendChild(toast);
+  gsap.timeline()
+    .fromTo(toast, {x:160, opacity:0, rotate:3}, {x:0, opacity:1, rotate:0, duration:.35, ease:"back.out(2)"})
+    .to(toast, {opacity:0, x:40, scale:.95, duration:.3, delay:2.2, onComplete:()=>toast.remove()});
 }
 
 function burst(count, epic){
@@ -443,7 +1138,6 @@ function burst(count, epic){
     d.style.fontSize = (epic ? 26 + Math.random()*26 : 22 + Math.random()*16) + "px";
     document.body.appendChild(d);
 
-    // epic bursts fly outward from center like fireworks; normal bursts just drift up
     const angle = Math.random() * Math.PI * 2;
     const dist = epic ? 140 + Math.random()*260 : 30 + Math.random()*40;
     const dx = epic ? Math.cos(angle)*dist : (Math.random()-0.5)*60;
@@ -451,71 +1145,85 @@ function burst(count, epic){
 
     gsap.fromTo(d, {opacity:1, x:0, y:0, scale:.5, rotate:0}, {
       opacity:0, x:dx, y:dy, scale: epic ? 1.4+Math.random()*.6 : 1.2,
-      rotate: (Math.random()-0.5)*240,
-      duration: epic ? 1+Math.random()*.6 : 1.1+Math.random()*.4,
-      ease: epic ? "power2.out" : "power1.out",
-      onComplete:()=>d.remove()
+      rotate: (Math.random()-0.5)*240, duration: epic ? 1+Math.random()*.6 : 1.1+Math.random()*.4,
+      ease: epic ? "power2.out" : "power1.out", onComplete:()=>d.remove()
     });
   }
 }
 
-function playSound(url){
-  if(!url) return;
-  const a = new Audio(url);
-  a.volume = .55;
-  a.play().catch(()=>{});
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(url, fallbackType){
+  if(url){
+    const a = new Audio(url);
+    a.volume = .55;
+    a.play().catch(()=> playSynth(fallbackType));
+  } else { playSynth(fallbackType); }
+}
+function playSynth(type){
+  if(!audioCtx) return;
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  
+  if(type === "rankup"){
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now + 0.1);
+    osc.frequency.setValueAtTime(659, now + 0.2); osc.frequency.setValueAtTime(880, now + 0.3);
+    gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc.start(now); osc.stop(now + 0.6);
+  } else if(type === "overtake"){
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(330, now); osc.frequency.linearRampToValueAtTime(660, now + 0.15);
+    gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.start(now); osc.stop(now + 0.25);
+  } else if(type === "correct"){
+    osc.type = 'sine'; osc.frequency.setValueAtTime(523, now); osc.frequency.setValueAtTime(659, now + 0.1); osc.frequency.setValueAtTime(784, now + 0.2);
+    gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.start(now); osc.stop(now + 0.4);
+  } else if(type === "wrong"){
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+    gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc.start(now); osc.stop(now + 0.35);
+  } else if(type === "score"){
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now + 0.08); osc.frequency.setValueAtTime(659, now + 0.16);
+    gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc.start(now); osc.stop(now + 0.35);
+  }
 }
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
-/* ---------- particles backdrop (lightweight canvas, gsap-driven opacity) ---------- */
 const canvas = document.getElementById("particles");
 const ctx = canvas.getContext("2d");
 function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
-resize();
-addEventListener("resize", resize);
-const dust = Array.from({length:90}, ()=>({x:Math.random()*innerWidth, y:Math.random()*innerHeight, v:0.25+Math.random()*0.6, r:1+Math.random()*1.5}));
+resize(); addEventListener("resize", resize);
+let dust = [];
+function initParticles(){
+  dust = Array.from({length:90}, ()=>({ x:Math.random()*innerWidth, y:Math.random()*innerHeight, v:0.25+Math.random()*0.6, r:1+Math.random()*1.5 }));
+}
+initParticles(); addEventListener("resize", initParticles);
+
 (function loop(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(config.particles){
-    ctx.fillStyle = "rgba(255,255,255,.35)";
-    dust.forEach(p=>{
-      p.y += p.v;
-      if(p.y > innerHeight) p.y = 0;
-      ctx.fillRect(p.x, p.y, p.r, p.r);
-    });
+    const isLoud = document.documentElement.getAttribute("data-theme") === "loud";
+    ctx.fillStyle = isLoud ? "rgba(124,58,237,.25)" : "rgba(255,255,255,.35)";
+    dust.forEach(p=>{ p.y += p.v; if(p.y > innerHeight) p.y = 0; ctx.fillRect(p.x, p.y, p.r, p.r); });
   }
   requestAnimationFrame(loop);
 })();
 
-/* ---------- theme ---------- */
-function theme(t){
-  if(t === "purple") setVars("#ff2e9a","#00f0ff");
-  if(t === "fire")   setVars("#ff5e3a","#ffb13c");
-  if(t === "cyber")  setVars("#00ffaa","#00bfff");
-  localStorage.setItem(LS_THEME, t);
-}
-function setVars(a,b){
-  document.documentElement.style.setProperty("--p", a);
-  document.documentElement.style.setProperty("--s", b);
-}
+function theme(t){ document.documentElement.setAttribute("data-theme", t); localStorage.setItem(LS_THEME, t); }
 
-/* ---------- secret admin route ----------
-   The admin page only exists at this exact URL hash. It is never linked from the
-   visible board, so nothing in that view hints at its existence. Default path below —
-   change it (and store your own) before relying on this for anything sensitive, since
-   anyone with view-source access to this file can read the default. */
 const ADMIN_PATH = localStorage.getItem("admin_path") || "vault-7x2k";
 let unlocked = false;
 
 function route(){
   const isAdminUrl = location.hash === "#" + ADMIN_PATH;
   document.getElementById("admin-view").classList.toggle("open", isAdminUrl);
-  if(isAdminUrl){
-    lockNow(); // always start locked, even on direct navigation
-  }
+  if(isAdminUrl){ lockNow(); }
 }
 window.addEventListener("hashchange", route);
 
@@ -524,8 +1232,7 @@ function lockNow(){
   document.getElementById("admin-content").classList.remove("unlocked");
   document.getElementById("lock-screen").style.display = "flex";
   const pinInput = document.getElementById("pin-input");
-  pinInput.value = "";
-  document.getElementById("lock-msg").innerText = "";
+  pinInput.value = ""; document.getElementById("lock-msg").innerText = "";
   setTimeout(()=>pinInput.focus(), 50);
 }
 
@@ -537,108 +1244,147 @@ function unlock(pin){
     document.getElementById("cfg-title").value = config.title;
     document.getElementById("cfg-sound").value = config.soundRankUp;
     document.getElementById("cfg-overtake").value = config.soundOvertake;
-    renderAdminList();
+    renderAdminList(); renderQuestionsAdminList();
     gsap.fromTo("#admin-content", {opacity:0, y:10}, {opacity:1, y:0, duration:.3});
   } else {
-    document.getElementById("lock-msg").innerText = "INCORRECT PIN";
+    document.getElementById("lock-msg").innerText = "INCORRECT TERMINAL PIN";
     gsap.fromTo("#pin-input", {x:-6}, {x:6, duration:.06, repeat:5, yoyo:true, clearProps:"x"});
     document.getElementById("pin-input").value = "";
   }
 }
 
-document.getElementById("pin-input").addEventListener("keydown", e=>{
-  if(e.key === "Enter") unlock(e.target.value);
-});
+document.getElementById("pin-input").addEventListener("keydown", e=>{ if(e.key === "Enter") unlock(e.target.value); });
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden && unlocked) lockNow(); });
+window.addEventListener("blur", ()=>{ if(unlocked) lockNow(); });
+window.addEventListener("keydown", e=>{ if(e.key === "Escape" && unlocked) lockNow(); });
 
-// auto re-lock the instant this tab loses focus or becomes hidden — covers alt-tabbing
-// during a screen share, switching windows, or minimizing while a share is live.
-document.addEventListener("visibilitychange", ()=>{
-  if(document.hidden && unlocked) lockNow();
-});
-window.addEventListener("blur", ()=>{
-  if(unlocked) lockNow();
-});
-window.addEventListener("keydown", e=>{
-  if(e.key === "Escape" && unlocked) lockNow();
-});
-
-/* ---------- admin actions ---------- */
 function renderAdminList(){
   document.getElementById("list").innerHTML = players.slice().sort((a,b)=>b.score-a.score).map(p=>`
     <div class="prow">
       <span>${escapeHtml(p.name)}</span>
       <input type="number" value="${p.score}" onchange="updateScore(${p.id}, this.value)">
       <button class="danger" onclick="removePlayer(${p.id})">🗑</button>
-    </div>`).join("") || `<div style="color:var(--dim);font-size:13px;padding:6px 0;">No players yet.</div>`;
-}
-function addPlayer(){
-  const nameEl = document.getElementById("pname");
-  const scoreEl = document.getElementById("pscore");
-  const name = nameEl.value.trim();
-  if(!name) return;
-  players.push({ name, score: parseInt(scoreEl.value)||0, id: Date.now() + Math.floor(Math.random()*1000) });
-  persist();
-  nameEl.value = ""; scoreEl.value = "0";
-  renderAdminList();
-  render();
-  burst(16);
-}
-function updateScore(id, val){
-  const item = players.find(p => p.id === id);   // FIX: id stays numeric end-to-end, no string/number mismatch
-  if(!item) return;
-  item.score = parseInt(val) || 0;
-  persist();
-  renderAdminList();
-  render();
-}
-function removePlayer(id){
-  players = players.filter(p => p.id !== id);
-  persist();
-  prevOrder = prevOrder.filter(pid => pid !== id);
-  renderAdminList();
-  render();
-}
-function saveConfig(){
-  config = {
-    title: document.getElementById("cfg-title").value || config.title,
-    soundRankUp: document.getElementById("cfg-sound").value,
-    soundOvertake: document.getElementById("cfg-overtake").value,
-    particles: true
-  };
-  localStorage.setItem(LS_CONFIG, JSON.stringify(config));
-  render();
+    </div>`).join("") || `<div style="color:var(--dim);font-size:13px;padding:6px 0;">No operational player parameters mapped.</div>`;
 }
 
-/* ---------- cross-tab sync (e.g. board on a TV tab, admin on a phone tab, same browser) ----------
-   Uses the native 'storage' event instead of window.open()+postMessage, which is more reliable
-   on static hosts (no popup blockers, no opener-window dependency, works in iframes too). */
+function renderQuestionsAdminList() {
+  const prefixes = ["A", "B", "C", "D"];
+  document.getElementById("q-list").innerHTML = questions.map((q, idx)=>`
+    <div class="qrow">
+      <div class="qrow-top">
+        <strong style="color:var(--p); font-size:12px;">MATCH CELL ${idx+1} [${q.points} PTS]</strong>
+        <button class="danger" style="margin:0; padding:2px 8px; font-size:11px;" onclick="removeQuestion(${idx})">🗑</button>
+      </div>
+      <div class="qrow-body">${escapeHtml(q.text)}</div>
+      <div class="qrow-opts">
+        <span>A: ${escapeHtml(q.options[0])}</span><span>B: ${escapeHtml(q.options[1])}</span>
+        <span>C: ${escapeHtml(q.options[2])}</span><span>D: ${escapeHtml(q.options[3])}</span>
+      </div>
+      <div class="qrow-ans">Target Solution Key: Option ${prefixes[q.correctIndex]}</div>
+    </div>
+  `).join("") || `<div style="color:var(--dim);font-size:13px;padding:6px 0;">Trivia questions pipeline stack completely cleared.</div>`;
+}
+
+function addQuestion() {
+  const txtEl = document.getElementById("qtxt"); const optAEl = document.getElementById("qoptA");
+  const optBEl = document.getElementById("qoptB"); const optCEl = document.getElementById("qoptC");
+  const optDEl = document.getElementById("qoptD"); const correctEl = document.getElementById("qcorrect");
+  const ptsEl = document.getElementById("qpts");
+  const text = txtEl.value.trim(); const options = [optAEl.value.trim(), optBEl.value.trim(), optCEl.value.trim(), optDEl.value.trim()];
+  const correctIndex = parseInt(correctEl.value); const points = parseInt(ptsEl.value) || 0;
+
+  if(!text || options.some(o => !o)) { showToast("Fill all question fields."); return; }
+  questions.push({ text, options, correctIndex, points });
+  persistQuestions();
+  txtEl.value = ""; optAEl.value = ""; optBEl.value = ""; optCEl.value = ""; optDEl.value = ""; ptsEl.value = "100";
+  renderQuestionsAdminList();
+  if(document.getElementById("game-view").style.display === "block"){ setupGameArena(); }
+  showToast("Question added to pipeline."); burst(8);
+}
+
+function removeQuestion(index) {
+  questions.splice(index, 1);
+  if(currentQIdx >= questions.length) currentQIdx = Math.max(0, questions.length - 1);
+  persistQuestions(); renderQuestionsAdminList();
+  if(document.getElementById("game-view").style.display === "block"){ setupGameArena(); }
+}
+
+function addPlayer(){
+  const nameEl = document.getElementById("pname"); const scoreEl = document.getElementById("pscore");
+  const name = nameEl.value.trim();
+  if(!name) { showToast("Enter a player name."); return; }
+  players.push({ name, score: parseInt(scoreEl.value)||0, id: Date.now() + Math.floor(Math.random()*1000) });
+  persist(); nameEl.value = ""; scoreEl.value = "0";
+  renderAdminList(); render();
+  if(document.getElementById("game-view").style.display === "block"){ setupGameArena(); }
+  burst(16); showToast(`Player "${name}" committed.`);
+}
+
+function updateScore(id, val){
+  const item = players.find(p => p.id === id); if(!item) return;
+  item.score = parseInt(val) || 0; persist(); renderAdminList(); render();
+  if(document.getElementById("game-view").style.display === "block"){ setupGameArena(); }
+}
+
+function removePlayer(id){
+  players = players.filter(p => p.id !== id); persist(); prevOrder = prevOrder.filter(pid => pid !== id);
+  renderAdminList(); render();
+  if(document.getElementById("game-view").style.display === "block"){ setupGameArena(); }
+}
+
+function saveConfig(){
+  config = { title: document.getElementById("cfg-title").value || config.title, soundRankUp: document.getElementById("cfg-sound").value, soundOvertake: document.getElementById("cfg-overtake").value, particles: true };
+  persistConfig(); render(); showToast("System parameters saved.");
+}
+
+function exportData(){
+  const data = { players, questions, config, pin: localStorage.getItem(LS_PIN), theme: localStorage.getItem(LS_THEME), adminPath: localStorage.getItem("admin_path") };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "leaderboard-save.json"; a.click(); URL.revokeObjectURL(url);
+  showToast("Save file downloaded.");
+}
+
+function importData(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(Array.isArray(data.players)){ players = data.players; persist(); }
+      if(Array.isArray(data.questions)){ questions = data.questions; persistQuestions(); }
+      if(data.config){ config = {...config, ...data.config}; persistConfig(); }
+      if(data.pin) localStorage.setItem(LS_PIN, data.pin);
+      if(data.theme) { localStorage.setItem(LS_THEME, data.theme); theme(data.theme); }
+      if(data.adminPath) localStorage.setItem("admin_path", data.adminPath);
+      prevOrder = players.slice().sort((a,b)=>b.score-a.score).map(p=>p.id);
+      renderAdminList(); renderQuestionsAdminList(); render();
+      if(document.getElementById("game-view").style.display === "block") setupGameArena();
+      showToast("Save file restored successfully."); burst(20);
+    }catch(err){ showToast("Invalid save file."); }
+  };
+  reader.readAsText(file); input.value = "";
+}
+
+function showToast(msg){
+  const container = document.getElementById("toast-container"); const toast = document.createElement("div"); toast.className = "toast"; toast.textContent = msg;
+  container.appendChild(toast); setTimeout(()=>{ toast.style.opacity='0'; toast.style.transform='translateX(40px)'; setTimeout(()=>toast.remove(),300); }, 3000);
+}
+
 window.addEventListener("storage", (e)=>{
-  if(e.key === LS_PLAYERS){
-    players = JSON.parse(e.newValue || "[]");
-    render();
-  }
-  if(e.key === LS_CONFIG){
-    config = JSON.parse(e.newValue || "null") || config;
-    render();
-  }
-  if(e.key === LS_THEME && e.newValue){
-    theme(e.newValue);
-  }
+  if(e.key === LS_PLAYERS){ players = JSON.parse(e.newValue || "[]"); render(); if(document.getElementById("game-view").style.display === "block") setupGameArena(); }
+  if(e.key === LS_QUESTIONS) { questions = JSON.parse(e.newValue || "[]"); if(document.getElementById("game-view").style.display === "block") setupGameArena(); }
+  if(e.key === LS_CONFIG){ config = JSON.parse(e.newValue || "null") || config; render(); }
+  if(e.key === LS_THEME && e.newValue){ theme(e.newValue); }
 });
 
 function changePin(){
-  const val = document.getElementById("cfg-pin").value.trim();
-  if(!val){ return; }
-  localStorage.setItem(LS_PIN, val);
-  document.getElementById("cfg-pin").value = "";
-  document.getElementById("lock-msg").innerText = "";
-  alert("PIN updated.");
+  const val = document.getElementById("cfg-pin").value.trim(); if(!val){ return; }
+  localStorage.setItem(LS_PIN, val); document.getElementById("cfg-pin").value = ""; document.getElementById("lock-msg").innerText = ""; showToast("Terminal master encryption PIN updated.");
 }
 
-/* ---------- boot ---------- */
-theme(localStorage.getItem(LS_THEME) || "purple");
-render();
-route();
+loadAll(); theme(localStorage.getItem(LS_THEME) || "purple"); render(); route();
+if(document.getElementById("game-view").style.display === "block"){ setupGameArena(); }
 </script>
 </body>
 </html>
